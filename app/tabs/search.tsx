@@ -106,7 +106,7 @@ export default function SearchScreen() {
 
   // Clear recent searches
   const clearRecentSearches = () => {
-    setRecentSearches([]);
+    setRecentSearches([]); 
   };
 
   const renderSearchResult = ({ item }: { item: SearchResult }) => (
