@@ -1,22 +1,39 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { db } from "../../firebaseConfig";
+import { savePost } from "../../utils/firestore"; // Import your Firestore utility
 import { CATEGORIES } from '../constants/categories';
 
+type Post = {
+  id: string;
+  content: string;
+  username: string;
+  timestamp: string;
+  category: string;
+  isAnonymous: boolean;
+  likes: number;
+  userId: string;  // Add this line
+  mood?: string;   // Make this optional since it's not always required
+};
+
 export default function PostScreen() {
+  const router = useRouter();
   const [confession, setConfession] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -29,13 +46,31 @@ export default function PostScreen() {
     { id: 'funny', icon: 'happy', label: 'Funny' },
   ];
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!selectedCategory) {
       Alert.alert('Select Category', 'Please select a category for your confession');
       return;
     }
-    // Add post logic here
-    router.push('/tabs');
+    try {
+      const postId = await savePost({
+        content: confession,
+        username: isAnonymous ? "Anonymous" : "YourUserName",
+        timestamp: new Date().toISOString(),
+        category: selectedCategory,
+        isAnonymous,
+        likes: 0,
+        userId: "user123", // Make sure this matches your actual user ID
+        mood: mood, // Include mood if selected
+      });
+      // Reset form
+      setConfession('');
+      setSelectedCategory('');
+      setIsAnonymous(true);
+      setMood('');
+      router.push(`/post/${postId}`);
+    } catch (error) {
+      Alert.alert("Error", "Failed to post. Please try again.");
+    }
   };
 
   const characterCount = confession.length;
@@ -163,6 +198,54 @@ export default function PostScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+export function PostsScreen() {
+  const router = useRouter();
+  const [posts, setPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPosts(
+        snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            content: data.content ?? "",
+            username: data.username ?? "Anonymous",
+            timestamp: data.timestamp ?? "",
+            category: data.category ?? "",
+            isAnonymous: data.isAnonymous ?? true,
+            likes: data.likes ?? 0,
+            userId: data.userId ?? "",  // Add this line
+            mood: data.mood           // Add this line
+          };
+        })
+      );
+    });
+    return unsubscribe;
+  }, []);
+
+  return (
+    <FlatList
+      data={posts}
+      keyExtractor={item => item.id}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          onPress={() => router.push(`/post/${item.id}`)}
+          style={{ padding: 16, borderBottomWidth: 1, borderColor: "#eee" }}
+        >
+          <Text style={{ fontWeight: "bold" }}>
+            {item.isAnonymous ? "Anonymous" : item.username}
+          </Text>
+          <Text style={{ color: "#666", fontSize: 12 }}>{item.timestamp}</Text>
+          <Text style={{ marginTop: 8 }}>{item.content}</Text>
+          <Text style={{ color: "#007AFF", marginTop: 4 }}>{item.category}</Text>
+        </TouchableOpacity>
+      )}
+    />
   );
 }
 

@@ -3,9 +3,11 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Swiper from 'react-native-swiper';
+import { useCurrentUser } from "../utils/auth"; // Add this import
 
 export default function WelcomeScreen() {
   const [showMain, setShowMain] = useState(false);
+  const { displayName } = useCurrentUser(); // Use the hook
 
   if (!showMain) {
     return (
@@ -59,6 +61,9 @@ export default function WelcomeScreen() {
           resizeMode="contain"
         />
         <Text style={styles.title}>Campus Confessions</Text>
+        <Text style={{ fontSize: 18, marginTop: 10 }}>
+          Welcome, {displayName}
+        </Text>
       </View>
       
       <View style={styles.buttonContainer}>

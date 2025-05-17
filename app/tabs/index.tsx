@@ -1,161 +1,64 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { CATEGORIES, Category } from '../constants/categories';
+import { useRouter } from 'expo-router';
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect, useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { db } from "../../firebaseConfig";
 
-// Update the Confession type
-type Confession = {
+// Replace with your actual username or userId logic
+const CURRENT_USERNAME = "YourUserName"; // Or use userId if you store it
+
+type Post = {
   id: string;
   content: string;
-  likes: number;
-  comments: number;
+  username: string;
   timestamp: string;
-  isLiked?: boolean;
-  category?: string;
-  mood?: 'happy' | 'sad' | 'funny' | 'angry';
-  isAnonymous: boolean;  // This is required (no question mark)
-  username?: string;     // This is optional (has question mark)
+  category: string;
+  isAnonymous: boolean;
+  likes: number;
+  userId: string; // Make sure this is included
 };
 
-// Add more varied dummy data
-const DUMMY_CONFESSIONS: Confession[] = [
-  {
-    id: '1',
-    content: "I actually enjoy pineapple on pizza and I'm tired of pretending I don't",
-    likes: 42,
-    comments: 15,
-    timestamp: '2h ago',
-    category: 'Food',
-    isAnonymous: true,
-  },
-  {
-    id: '2',
-    content: "Sometimes I pretend to be on my phone to avoid talking to people on campus",
-    likes: 128,
-    comments: 23,
-    timestamp: '4h ago',
-    category: 'Campus Life',
-    isAnonymous: false,
-    username: 'Student123',
-  },
-  {
-    id: '3',
-    content: "The library's third floor has become my second home. I've spent more time there this semester than in my actual room.",
-    likes: 89,
-    comments: 12,
-    timestamp: '5h ago',
-    category: 'Study',
-    mood: 'funny',
-    isAnonymous: true,
-  },
-];
+export default function PostsTabScreen() {
+  const router = useRouter();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [showMyConfessions, setShowMyConfessions] = useState(false);
+  const currentUserId = "user123"; // Make sure this matches the userId you use when posting
 
-export default function HomeScreen() {
-  const [showNew, setShowNew] = useState(true);
-  const [confessions, setConfessions] = useState(DUMMY_CONFESSIONS);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  useEffect(() => {
+    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPosts(
+        snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            content: data.content ?? "",
+            username: data.username ?? "Anonymous",
+            timestamp: data.timestamp ?? "",
+            category: data.category ?? "",
+            isAnonymous: data.isAnonymous ?? true,
+            likes: data.likes ?? 0,
+            userId: data.userId ?? "",
+          };
+        })
+      );
+    });
+    return unsubscribe;
+  }, []);
 
-  // Add filtered confessions
-  const filteredConfessions = selectedCategory 
-    ? confessions.filter(confession => confession.category === CATEGORIES.find(cat => cat.id === selectedCategory)?.name)
-    : confessions;
-
-  const toggleLike = (postId: string) => {
-    setConfessions(prevConfessions =>
-      prevConfessions.map(confession =>
-        confession.id === postId
-          ? {
-              ...confession,
-              likes: confession.isLiked ? confession.likes - 1 : confession.likes + 1,
-              isLiked: !confession.isLiked,
-            }
-          : confession
-      )
-    );
-  };
-
-  const renderConfession = ({ item }: { item: Confession }) => (
-    <Pressable 
-      style={styles.postCard}
-      onPress={() => {
-        router.push(`./post/${item.id}`);
-      }}
-    >
-      <View style={styles.postHeader}>
-        <View style={styles.userBadge}>
-          <Text style={styles.userBadgeText}>
-            {item.isAnonymous ? 'Anonymous' : item.username}
-          </Text>
-        </View>
-        {item.category && (
-          <View style={styles.categoryBadge}>
-            <Ionicons 
-              name={CATEGORIES.find(cat => cat.name === item.category)?.icon || 'apps'} 
-              size={14} 
-              color="#007AFF" 
-            />
-            <Text style={styles.categoryBadgeText}>{item.category}</Text>
-          </View>
-        )}
-      </View>
-
-      <Text style={styles.postContent}>{item.content}</Text>
-      <Text style={styles.timestamp}>{item.timestamp}</Text>
-      
-      <View style={styles.actions}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => toggleLike(item.id)}
-        >
-          <Ionicons
-            name={item.isLiked ? "heart" : "heart-outline"}
-            size={24}
-            color={item.isLiked ? "#FF4444" : "#666"}
-          />
-          <Text style={styles.actionText}>{item.likes}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="chatbubble-outline" size={24} color="#666" />
-          <Text style={styles.actionText}>{item.comments}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="flag-outline" size={24} color="#666" />
-        </TouchableOpacity>
-      </View>
-    </Pressable>
-  );
-
-  const renderCategory = ({ item }: { item: Category }) => (
-    <TouchableOpacity 
-      style={[
-        styles.categoryCard,
-        selectedCategory === item.id && styles.selectedCategory
-      ]}
-      onPress={() => setSelectedCategory(item.id)}
-    >
-      <Ionicons 
-        name={item.icon} 
-        size={24} 
-        color={selectedCategory === item.id ? '#fff' : '#007AFF'} 
-      />
-      <Text style={[
-        styles.categoryText,
-        selectedCategory === item.id && styles.selectedCategoryText
-      ]}>
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  );
+  // Filter posts based on userId for My Confessions
+  const filteredPosts = showMyConfessions
+    ? posts.filter(post => post.userId === currentUserId)
+    : posts;
 
   return (
     <View style={styles.container}>
+      {/* Add the title bar back */}
       <View style={styles.titleBar}>
         <Text style={styles.title}>CampusConfessions</Text>
         <TouchableOpacity 
-          onPress={() => router.push('./likedConfessions')}
+          onPress={() => router.push('/likedConfessions')}
           style={styles.likedButton}
         >
           <Ionicons name="heart-outline" size={28} color="#007AFF" />
@@ -164,44 +67,52 @@ export default function HomeScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity
-          style={[styles.toggle, showNew && styles.activeToggle]}
-          onPress={() => setShowNew(true)}
+          style={[styles.toggle, !showMyConfessions && styles.activeToggle]}
+          onPress={() => setShowMyConfessions(false)}
         >
-          <Text style={[styles.toggleText, showNew && styles.activeToggleText]}>New</Text>
+          <Text style={[styles.toggleText, !showMyConfessions && styles.activeToggleText]}>New</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.toggle, !showNew && styles.activeToggle]}
-          onPress={() => setShowNew(false)}
+          style={[styles.toggle, showMyConfessions && styles.activeToggle]}
+          onPress={() => setShowMyConfessions(true)}
         >
-          <Text style={[styles.toggleText, !showNew && styles.activeToggleText]}>Popular</Text>
+          <Text style={[styles.toggleText, showMyConfessions && styles.activeToggleText]}>My Confessions</Text>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.categoriesContainer}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={CATEGORIES}
-          renderItem={renderCategory}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.categoriesList}
-        />
       </View>
 
       <FlatList
-        data={filteredConfessions}
-        renderItem={renderConfession}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        data={filteredPosts}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => router.push(`/post/${item.id}`)}
+            style={styles.postCard}
+          >
+            <View style={styles.userBadge}>
+              <Text style={styles.username}>
+                {item.isAnonymous ? "Anonymous" : item.username}
+              </Text>
+              <Text style={styles.category}>{item.category}</Text>
+            </View>
+            <Text style={styles.content}>{item.content}</Text>
+            <View style={styles.footer}>
+              <Text style={styles.stats}>❤️ {item.likes}</Text>
+              <Text style={styles.timestamp}>{item.timestamp}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
       />
     </View>
   );
 }
 
+// Add these new styles
+
+git config --global user.email ""
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   titleBar: {
     flexDirection: 'row',
@@ -213,21 +124,22 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#007AFF',
-    letterSpacing: -1,
+  },
+  likedButton: {
+    padding: 8,
   },
   header: {
     flexDirection: 'row',
-    padding: 15,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   toggle: {
     flex: 1,
-    padding: 10,
+    padding: 14,
     alignItems: 'center',
   },
   activeToggle: {
@@ -242,115 +154,52 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-  list: {
-    padding: 15,
-  },
   postCard: {
     backgroundColor: '#fff',
+    margin: 10,
     borderRadius: 16,
-    padding: 18,
-    marginBottom: 15,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 4,
-  },
-  postHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    elevation: 2,
   },
   userBadge: {
-    backgroundColor: '#f0f8ff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  userBadgeText: {
-    color: '#007AFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  username: {
     backgroundColor: '#f0f8ff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryBadgeText: {
     color: '#007AFF',
-    fontSize: 12,
-    marginLeft: 4,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 8,
+    fontWeight: 'bold',
   },
-  postContent: {
+  category: {
+    backgroundColor: '#f0f8ff',
+    color: '#007AFF',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    fontSize: 12,
+  },
+  content: {
     fontSize: 16,
-    marginBottom: 12,
     lineHeight: 24,
-    color: '#333',
+    marginVertical: 8,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  stats: {
+    color: '#666',
   },
   timestamp: {
-    fontSize: 12,
     color: '#666',
-    marginBottom: 10,
-  },
-  actions: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingTop: 10,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 20,
-  },
-  actionText: {
-    marginLeft: 5,
-    color: '#666',
-    fontSize: 14,
-  },
-  categoriesContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 10,
-  },
-  categoriesList: {
-    paddingHorizontal: 15,
-  },
-  categoryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f8ff',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  selectedCategory: {
-    backgroundColor: '#007AFF',
-  },
-  categoryText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  selectedCategoryText: {
-    color: '#fff',
-  },
-  likedButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f8ff',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

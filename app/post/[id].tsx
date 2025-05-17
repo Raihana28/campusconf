@@ -1,14 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { collection, doc, getDoc, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { DUMMY_RESULTS } from '../constants/dummy-data';
+import { db } from "../../firebaseConfig";
+import { saveComment, savePost, saveUser } from "../../utils/firestore";
 
 type Comment = {
   id: string;
   content: string;
   username: string;
   timestamp: string;
+};
+
+type Post = {
+  id: string;
+  content: string;
+  username: string;
+  timestamp: string;
+  category: string;
+  isAnonymous: boolean;
+  likes: number;
+  userId: string;
 };
 
 export default function PostDetailScreen() {
@@ -23,20 +36,87 @@ export default function PostDetailScreen() {
       timestamp: '2m ago'
     }
   ]);
+  const [post, setPost] = useState<any>(null);
 
-  // Find the post from DUMMY_RESULTS using the id
-  const post = DUMMY_RESULTS.find(p => p.id === id);
+  useEffect(() => {
+    if (!id) return;
+    const fetchPost = async () => {
+      const docRef = doc(db, "posts", id as string);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setPost({ id: docSnap.id, ...docSnap.data() });
+      }
+    };
+    fetchPost();
+  }, [id]);
 
-  const handleAddComment = () => {
-    if (newComment.trim()) {
+  useEffect(() => {
+    if (!post) return;
+    const q = query(
+      collection(db, "posts", post.id, "comments"),
+      orderBy("timestamp", "desc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setComments(
+        snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            content: data.content ?? "",
+            username: data.username ?? "Anonymous",
+            timestamp: data.timestamp ?? "",
+          };
+        })
+      );
+    });
+    return unsubscribe;
+  }, [post]);
+
+  const handleAddComment = async () => {
+    if (newComment.trim() && post) {
       const comment = {
-        id: Date.now().toString(),
         content: newComment,
-        username: 'Anonymous',
-        timestamp: 'Just now'
+        username: "Anonymous", // Or use actual username if available
+        timestamp: new Date().toISOString(),
       };
-      setComments(prev => [comment, ...prev]);
       setNewComment('');
+      try {
+        await saveComment(post.id, comment);
+        // Optionally: fetch comments again or use onSnapshot for real-time updates
+      } catch (error) {
+        alert("Failed to save comment: " + error);
+      }
+    }
+  };
+
+  const handleSavePost = async () => {
+    if (!post) return;
+    try {
+      const postId = await savePost({
+        content: post.content,
+        username: post.username ?? "Anonymous",
+        timestamp: post.timestamp,
+        category: post.category,
+        isAnonymous: post.isAnonymous,
+        likes: post.likes,
+        userId: post.userId ?? "user123", // Add userId from post or fallback
+      });
+      alert("Post saved with ID: " + postId);
+    } catch (error) {
+      alert("Failed to save post: " + error);
+    }
+  };
+
+  // Example usage
+  const saveUserExample = async () => {
+    try {
+      await saveUser("userId123", {
+        username: "Alice",
+        email: "alice@example.com",
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      alert("Failed to save user: " + error);
     }
   };
 
@@ -103,6 +183,10 @@ export default function PostDetailScreen() {
                 <Text style={styles.interactionText}>{comments.length}</Text>
               </View>
             </View>
+
+            <TouchableOpacity onPress={handleSavePost} style={{margin: 10, padding: 10, backgroundColor: "#007AFF", borderRadius: 8}}>
+              <Text style={{color: "#fff", textAlign: "center"}}>Save Post to Firestore</Text>
+            </TouchableOpacity>
           </View>
         )}
         contentContainerStyle={styles.commentsContainer}
