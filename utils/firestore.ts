@@ -1,5 +1,5 @@
-import { addDoc, collection, doc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
-import { db } from "../firebaseConfig";
+import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
+import { auth, db } from "../firebaseConfig";
 
 type PostData = {
   content: string;
@@ -12,9 +12,44 @@ type PostData = {
   mood?: string;
 };
 
+export type User = {
+  id: string;
+  email: string;
+  username: string;
+  createdAt: string;
+  bio?: string; // Add bio as an optional property
+};
+
 export const savePost = async (postData: PostData): Promise<string> => {
   const docRef = await addDoc(collection(db, "posts"), postData);
   return docRef.id;
+};
+
+export const createUser = async (userData: Omit<User, 'id'>) => {
+  const userRef = doc(db, "users", auth.currentUser!.uid); // Use Auth UID as document ID
+  await setDoc(userRef, {
+    ...userData,
+    createdAt: new Date().toISOString()
+  });
+  return auth.currentUser!.uid;
+};
+
+export const getUser = async (userId: string): Promise<User | null> => {
+  try {
+    const userDoc = await getDoc(doc(db, "users", userId));
+    if (userDoc.exists()) {
+      return { id: userDoc.id, ...userDoc.data() } as User;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting user:", error);
+    return null;
+  }
+};
+
+export const updateUser = async (userId: string, userData: Partial<User>) => {
+  const userRef = doc(db, "users", userId);
+  await setDoc(userRef, userData, { merge: true });
 };
 
 // Save a comment (to a post)

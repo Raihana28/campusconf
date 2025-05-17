@@ -1,15 +1,48 @@
 import { router } from 'expo-router';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { auth } from '../firebaseConfig';
+import { createUser } from '../utils/firestore';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleRegister = () => {
-    // Add your registration logic here
-    router.replace('/login');
+  const handleRegister = async () => {
+    if (!email || !username || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const { user } = userCredential;
+
+      await createUser({
+        email: user.email!,
+        username,
+        createdAt: new Date().toISOString()
+      });
+
+      // First show alert, then navigate
+      Alert.alert(
+        'Success',
+        'Account created successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              router.replace('/login');
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      Alert.alert('Error', error.message || 'Failed to create account');
+    }
   };
 
   return (
@@ -27,22 +60,31 @@ export default function RegisterScreen() {
 
       <TextInput
         style={styles.input}
+        placeholder="Username"
+        value={username}
+        onChangeText={setUsername}
+      />
+
+      <TextInput
+        style={styles.input}
         placeholder="Password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-      />
-
-      <TouchableOpacity style={styles.button} onPress={handleRegister}>
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={handleRegister}
+      >
         <Text style={styles.buttonText}>Register</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.linkButton}
+        onPress={() => router.push('/login')}
+      >
+        <Text style={styles.linkText}>Already have an account? Login</Text>
       </TouchableOpacity>
     </View>
   );
@@ -51,14 +93,16 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     padding: 20,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
+    color: '#007AFF',
   },
   input: {
     borderWidth: 1,
@@ -66,17 +110,26 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
+    fontSize: 16,
   },
   button: {
     backgroundColor: '#007AFF',
     padding: 15,
     borderRadius: 10,
-    marginVertical: 10,
+    marginTop: 10,
   },
   buttonText: {
     color: '#fff',
     textAlign: 'center',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+  },
+  linkButton: {
+    marginTop: 20,
+  },
+  linkText: {
+    color: '#007AFF',
+    textAlign: 'center',
+    fontSize: 16,
   },
 });

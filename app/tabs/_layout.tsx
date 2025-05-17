@@ -18,8 +18,8 @@ export default function TabsLayout() {
           elevation: 0,
           backgroundColor: 'rgba(255, 255, 255, 0.9)',
           borderRadius: 20,
-          height: 65, // Increased height
-          paddingTop: 8, // Added padding top
+          height: 65,
+          paddingTop: 8,
           borderWidth: 1,
           borderColor: '#007AFF',
           ...Platform.select({
@@ -33,11 +33,6 @@ export default function TabsLayout() {
               elevation: 4,
             },
           }),
-        },
-        tabBarItemStyle: {
-          height: 50,
-          width: 45,
-          marginTop: 5, // Added margin top to items
         },
       }}
     >
@@ -92,14 +87,6 @@ export default function TabsLayout() {
         options={{
           tabBarIcon: ({ color }) => (
             <Ionicons name="person" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="likedConfessions"
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="heart-outline" size={24} color={color} />
           ),
         }}
       />

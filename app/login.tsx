@@ -1,14 +1,22 @@
 import { Link, router } from 'expo-router';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { auth } from '../firebaseConfig';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    // Add your login logic here
-    router.replace('/tabs');  // Remove 'app/' from the path
+  const handleLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Navigate to tabs after successful login
+      router.replace('/tabs');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Error', error.message || 'Login failed');
+    }
   };
 
   return (
