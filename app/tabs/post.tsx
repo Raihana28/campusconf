@@ -17,9 +17,9 @@ import {
   View
 } from 'react-native';
 import { auth, db } from "../../firebaseConfig";
+import { Post, PostInput } from '../../types';
 import { getUser, savePost } from "../../utils/firestore"; // Import your Firestore utility
 import { CATEGORIES } from '../constants/categories';
-import { PostInput, Post } from '../../types';
 
 type Mood = {
   id: string;
@@ -46,7 +46,7 @@ const getMoodIcon = (mood: string): keyof typeof Ionicons.glyphMap => {
 export default function PostScreen() {
   const router = useRouter();
   const [confession, setConfession] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(true);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [mood, setMood] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -97,9 +97,13 @@ export default function PostScreen() {
     }
 
     try {
+      // Get current user data to ensure we have the correct username
+      const userData = await getUser(auth.currentUser.uid);
+      
       const newPost: PostInput = {
         content: confession,
-        username: isAnonymous ? 'Anonymous' : auth.currentUser.displayName || 'Anonymous',
+        // Use userData.username if available and not anonymous
+        username: isAnonymous ? 'Anonymous' : userData?.username || auth.currentUser.displayName || 'Anonymous',
         category: selectedCategory,
         isAnonymous: isAnonymous,
         userId: auth.currentUser.uid,
@@ -108,10 +112,8 @@ export default function PostScreen() {
 
       await savePost(newPost);
       
-      // Reset form
       setConfession('');
       setSelectedCategory('');
-      setIsAnonymous(true);
       setMood('');
       
       router.push('/tabs');

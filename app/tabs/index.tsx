@@ -327,15 +327,6 @@ export default function PostsTabScreen() {
         {item.mood && (
           <Ionicons name={getMoodIcon(item.mood)} size={20} color="#007AFF" />
         )}
-        {/* Show delete button only in My Confessions */}
-        {showMyConfessions && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDelete(item.id)}
-          >
-            <Ionicons name="trash" size={20} color="#FF3B30" />
-          </TouchableOpacity>
-        )}
       </View>
       
       <Text style={styles.content} numberOfLines={viewMode === 'grid' ? 3 : undefined}>
@@ -343,37 +334,41 @@ export default function PostsTabScreen() {
       </Text>
 
       <View style={styles.interactions}>
+        {/* Likes */}
         <TouchableOpacity 
           onPress={() => handleLike(item)}
           style={styles.interactionItem}
         >
           <Ionicons 
             name={item.hasLiked ? "heart" : "heart-outline"} 
-            size={20} 
+            size={24} 
             color={item.hasLiked ? '#FF3B30' : '#666'} 
           />
-          <Text style={[
-            styles.interactionCount,
-            item.hasLiked && styles.likedCount
-          ]}>
-            {item.likes}
+          <Text style={[styles.interactionCount, item.hasLiked && styles.likedCount]}>
+            {item.likes || 0}
           </Text>
         </TouchableOpacity>
 
+        {/* Comments */}
         <TouchableOpacity 
           onPress={() => router.push(`/post/${item.id}`)}
           style={styles.interactionItem}
         >
-          <Ionicons name="chatbubble-outline" size={20} color="#666" />
-          <Text style={styles.interactionCount}>{item.commentCount || 0}</Text>
+          <Ionicons name="chatbubble-outline" size={24} color="#666" />
+          <Text style={styles.interactionCount}>
+            {item.commentCount || 0}
+          </Text>
         </TouchableOpacity>
 
+        {/* Shares */}
         <TouchableOpacity 
           onPress={() => handleShare(item)}
           style={styles.interactionItem}
         >
-          <Ionicons name="share-outline" size={20} color="#666" />
-          <Text style={styles.interactionCount}>{item.shareCount || 0}</Text>
+          <Ionicons name="share-outline" size={24} color="#666" />
+          <Text style={styles.interactionCount}>
+            {item.shareCount || 0}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -629,7 +624,8 @@ const styles = StyleSheet.create({
   interactions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingTop: 10,
+    paddingTop: 12,
+    marginTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
@@ -664,11 +660,13 @@ const styles = StyleSheet.create({
   interactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    paddingVertical: 4,
   },
   interactionCount: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
+    fontWeight: '500',
   },
   likedCount: {
     color: '#FF3B30',

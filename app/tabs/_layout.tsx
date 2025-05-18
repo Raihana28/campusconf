@@ -1,27 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarShowLabel: false,
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#666',
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: '#fff',
+        tabBarInactiveTintColor: '#fff',
         headerShown: false,
+        tabBarLabel: ({ focused }) => null, // Remove default label
         tabBarStyle: {
           position: 'absolute',
           bottom: 20,
-          left: '10%',
-          right: '10%',
+          left: '15%',  // Changed from 10% to 15% to make bar narrower
+          right: '15%', // Changed from 10% to 15% to make bar narrower
           elevation: 0,
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          borderRadius: 20,
-          height: 65,
-          paddingTop: 8,
-          borderWidth: 1,
-          borderColor: '#007AFF',
+          backgroundColor: '#007AFF',
+          borderRadius: 30,
+          height: 65, // Slightly reduced height
+          paddingTop: 8,  // Reduced padding
+          paddingBottom: 8, // Reduced padding
+          borderWidth: 0,
           ...Platform.select({
             ios: {
               shadowColor: '#000',
@@ -40,7 +41,10 @@ export default function TabsLayout() {
         name="index"
         options={{
           tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={24} color={color} />
+            <View style={styles.tabItem}>
+              <Ionicons name="home" size={24} color={color} />
+              <Text style={styles.tabLabel}>Home</Text>
+            </View>
           ),
         }}
       />
@@ -48,7 +52,10 @@ export default function TabsLayout() {
         name="search"
         options={{
           tabBarIcon: ({ color }) => (
-            <Ionicons name="search" size={24} color={color} />
+            <View style={styles.tabItem}>
+              <Ionicons name="search" size={24} color={color} />
+              <Text style={styles.tabLabel}>Search</Text>
+            </View>
           ),
         }}
       />
@@ -56,21 +63,17 @@ export default function TabsLayout() {
         name="post"
         options={{
           tabBarIcon: ({ focused }) => (
-            <View style={[
-              styles.postButton,
-              focused && styles.postButtonActive
-            ]}>
-              <Ionicons 
-                name="add" 
-                size={40} 
-                color={focused ? '#fff' : '#007AFF'} 
-              />
+            <View>
+              <View style={[styles.postButton, focused && styles.postButtonActive]}>
+                <Ionicons name="add" size={40} color={focused ? '#fff' : '#007AFF'} />
+              </View>
+              <Text style={[styles.tabLabel, styles.postLabel]}></Text>
             </View>
           ),
           tabBarItemStyle: {
             height: 55,
             width: 50,
-            marginTop: -15,
+            marginTop: -15, // Increased negative margin to lift button higher
           },
         }}
       />
@@ -78,7 +81,10 @@ export default function TabsLayout() {
         name="notifications"
         options={{
           tabBarIcon: ({ color }) => (
-            <Ionicons name="notifications-outline" size={24} color={color} />
+            <View style={styles.tabItem}>
+              <Ionicons name="notifications-outline" size={24} color={color} />
+              <Text style={styles.tabLabel}>Alerts</Text>
+            </View>
           ),
         }}
       />
@@ -86,7 +92,10 @@ export default function TabsLayout() {
         name="profile"
         options={{
           tabBarIcon: ({ color }) => (
-            <Ionicons name="person" size={24} color={color} />
+            <View style={styles.tabItem}>
+              <Ionicons name="person" size={24} color={color} />
+              <Text style={styles.tabLabel}>Profile</Text>
+            </View>
           ),
         }}
       />
@@ -95,17 +104,33 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
+  tabItem: {
+    alignItems: 'center',
+    paddingTop: 2, // Reduced padding
+    width: 60,  // Added fixed width to control spacing
+  },
+  tabLabel: {
+    color: '#fff',
+    fontSize: 10,
+    marginTop: 2, // Reduced spacing between icon and label
+    fontWeight: '500',
+  },
+  postLabel: {
+    marginTop: 6, // Adjusted post label spacing
+    textAlign: 'center',
+  },
   postButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 45,  // Slightly smaller button
+    height: 45, // Slightly smaller button
+    borderRadius: 23,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#007AFF',
   },
   postButtonActive: {
     backgroundColor: '#007AFF',
+    borderColor: '#fff',
   },
 });

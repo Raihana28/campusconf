@@ -43,6 +43,45 @@ export default function SearchScreen() {
     loadRecentSearches();
   }, []);
 
+  // Add dummy results
+  const dummyResults: SearchResult[] = [
+    {
+      id: '1',
+      content: "Just aced my final exam after pulling an all-nighter! Coffee is my best friend 😴",
+      category: "Study",
+      timestamp: "2 hours ago",
+      likes: 45,
+      commentCount: 12,
+      isAnonymous: false,
+      username: "StudyBuddy",
+      userId: "user1",
+      mood: "happy"
+    },
+    {
+      id: '2',
+      content: "The cafeteria food today was a real adventure... not the good kind 🤢",
+      category: "Campus Life",
+      timestamp: "5 hours ago",
+      likes: 89,
+      commentCount: 23,
+      isAnonymous: true,
+      userId: "user2",
+      mood: "funny"
+    },
+    {
+      id: '3',
+      content: "To the person who returned my lost laptop at the library - you're an angel! 🙏",
+      category: "Gratitude",
+      timestamp: "1 day ago",
+      likes: 156,
+      commentCount: 15,
+      isAnonymous: false,
+      username: "GratefulStudent",
+      userId: "user3",
+      mood: "happy"
+    }
+  ];
+
   // Handle search with Firestore
   const handleSearch = async (searchText: string) => {
     if (!searchText.trim()) {
@@ -52,6 +91,12 @@ export default function SearchScreen() {
 
     setIsLoading(true);
     try {
+      // Include dummy results in search
+      const filteredDummy = dummyResults.filter(post => 
+        post.content.toLowerCase().includes(searchText.toLowerCase()) ||
+        post.category.toLowerCase().includes(searchText.toLowerCase())
+      );
+
       const postsRef = collection(db, 'posts');
       let baseQuery = query(postsRef);
 
@@ -83,7 +128,18 @@ export default function SearchScreen() {
           post.category.toLowerCase().includes(searchText.toLowerCase())
         );
 
-      setSearchResults(results);
+      // Combine dummy and Firestore results
+      const allResults = [...filteredDummy, ...results];
+      
+      // Sort results based on current sortBy value
+      const sortedResults = allResults.sort((a, b) => {
+        if (sortBy === 'latest') {
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        }
+        return b.likes - a.likes;
+      });
+
+      setSearchResults(sortedResults);
 
       // Save to recent searches
       if (searchText.trim()) {

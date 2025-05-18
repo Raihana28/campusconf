@@ -2,31 +2,40 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { collection, doc, getDoc, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { db } from "../../firebaseConfig";
+import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { auth, db } from "../../firebaseConfig";
 import { PostInput } from '../../types';
-import { saveComment, savePost, saveUser } from "../../utils/firestore";
+import { saveComment, savePost, saveUser, getUser } from "../../utils/firestore";
 
+// Update the Comment type to include isAnonymous
 type Comment = {
   id: string;
   content: string;
   username: string;
   timestamp: string;
+  isAnonymous: boolean; // Added this field
 };
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams();
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
+  // Update the initial state for comments
   const [comments, setComments] = useState<Comment[]>([
     {
       id: '1',
       content: 'This is so relatable!',
       username: 'Anonymous',
-      timestamp: '2m ago'
+      timestamp: '2m ago',
+      isAnonymous: true // Added this field
     }
   ]);
   const [post, setPost] = useState<any>(null);
+  const [stats, setStats] = useState({
+    likesCount: 0,
+    commentsCount: 0,
+    sharesCount: 0
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -55,6 +64,7 @@ export default function PostDetailScreen() {
             content: data.content ?? "",
             username: data.username ?? "Anonymous",
             timestamp: data.timestamp ?? "",
+            isAnonymous: data.isAnonymous ?? true // Added this field with default value
           };
         })
       );
@@ -62,20 +72,44 @@ export default function PostDetailScreen() {
     return unsubscribe;
   }, [post]);
 
+  useEffect(() => {
+    if (!post) return;
+    
+    // Update stats whenever post data changes
+    setStats({
+      likesCount: post.likes || 0,
+      commentsCount: comments.length,
+      sharesCount: post.shares || 0
+    });
+  }, [post, comments]);
+
   const handleAddComment = async () => {
-    if (newComment.trim() && post) {
+    if (!newComment.trim() && post) return;
+
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        Alert.alert('Error', 'You must be logged in to comment');
+        return;
+      }
+
+      // Get the current user's data from Firestore
+      const userData = await getUser(currentUser.uid);
+      
       const comment = {
         content: newComment,
-        username: "Anonymous", // Or use actual username if available
+        // Use the username from Firestore user data if available and not posting anonymously
+        username: userData?.username || 'Anonymous',
         timestamp: new Date().toISOString(),
+        isAnonymous: !userData?.username, // Set anonymous based on whether we have a username
+        userId: currentUser.uid, // Store the user ID for reference
       };
+
       setNewComment('');
-      try {
-        await saveComment(post.id, comment);
-        // Optionally: fetch comments again or use onSnapshot for real-time updates
-      } catch (error) {
-        alert("Failed to save comment: " + error);
-      }
+      await saveComment(post.id, comment);
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      Alert.alert('Error', 'Failed to post comment');
     }
   };
 
@@ -134,7 +168,12 @@ export default function PostDetailScreen() {
         renderItem={({ item }) => (
           <View style={styles.commentCard}>
             <View style={styles.commentHeader}>
-              <Text style={styles.commentUser}>{item.username}</Text>
+              <Text style={[
+                styles.commentUser,
+                item.isAnonymous && styles.anonymousUser
+              ]}>
+                {item.isAnonymous ? 'Anonymous' : item.username}
+              </Text>
               <Text style={styles.commentTime}>{item.timestamp}</Text>
             </View>
             <Text style={styles.commentContent}>{item.content}</Text>
@@ -166,12 +205,17 @@ export default function PostDetailScreen() {
                   size={24} 
                   color={isLiked ? "#FF3B30" : "#666"} 
                 />
-                <Text style={styles.interactionText}>{post.likes}</Text>
+                <Text style={styles.interactionText}>{stats.likesCount}</Text>
               </TouchableOpacity>
               
               <View style={styles.interactionButton}>
                 <Ionicons name="chatbubble-outline" size={24} color="#666" />
-                <Text style={styles.interactionText}>{comments.length}</Text>
+                <Text style={styles.interactionText}>{stats.commentsCount}</Text>
+              </View>
+
+              <View style={styles.interactionButton}>
+                <Ionicons name="share-outline" size={24} color="#666" />
+                <Text style={styles.interactionText}>{stats.sharesCount}</Text>
               </View>
             </View>
 
@@ -273,11 +317,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 20,
+    minWidth: 45, // Ensure consistent width for count displays
   },
   interactionText: {
     marginLeft: 5,
     color: '#666',
     fontSize: 14,
+    fontWeight: '500',
   },
   commentsContainer: {
     paddingBottom: 20,
@@ -327,5 +373,9 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  anonymousUser: {
+    color: '#666',
+    fontStyle: 'italic',
   },
 });

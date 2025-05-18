@@ -29,7 +29,6 @@ export default function ProfileScreen() {
     loadUserData();
   }, []);
 
-  // Update your loadUserData function
   const loadUserData = async () => {
     if (auth.currentUser) {
       const user = await getUser(auth.currentUser.uid);
@@ -215,7 +214,10 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={24} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.sectionItem}>
+        <TouchableOpacity 
+          style={styles.sectionItem}
+          onPress={() => router.push('/likedConfessions')}
+        >
           <Ionicons name="heart-outline" size={24} color="#007AFF" />
           <Text style={styles.sectionText}>Liked Posts</Text>
           <Ionicons name="chevron-forward" size={24} color="#666" />
