@@ -20,6 +20,15 @@ import { Post, PostInput } from '../../types';
 import { getUser, savePost } from "../../utils/firestore"; // Import your Firestore utility
 
 
+const CATEGORIES = [
+  { id: 'cafeteria', name: 'Cafeteria', icon: 'fast-food-outline' },
+  { id: 'dorm', name: 'Dorm Life', icon: 'bed-outline' },
+  { id: 'exams', name: 'Exams', icon: 'school-outline' },
+  { id: 'professors', name: 'Professors', icon: 'person-outline' },
+  { id: 'clubs', name: 'Clubs', icon: 'people-outline' },
+  { id: 'relationships', name: 'Relationships', icon: 'heart-outline' },
+];
+
 type Mood = {
   id: string;
   icon: string;
@@ -193,10 +202,38 @@ export default function PostScreen() {
               />
             </View>
 
- 
-
           </View>
 
+          {/* --- Category Picker --- */}
+          <View style={styles.optionSection}>
+            <Text style={styles.sectionTitle}>Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {CATEGORIES.map(category => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryChip,
+                    selectedCategory === category.name && styles.categoryChipSelected
+                  ]}
+                  onPress={() => setSelectedCategory(category.name)}
+                >
+                  <Ionicons
+                    name={category.icon as any}
+                    size={18}
+                    color={selectedCategory === category.name ? '#fff' : '#007AFF'}
+                  />
+                  <Text style={[
+                    styles.categoryChipText,
+                    selectedCategory === category.name && styles.categoryChipTextSelected
+                  ]}>
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* --- Mood Picker --- */}
           <View style={styles.optionSection}>
             <Text style={styles.sectionTitle}>How are you feeling?</Text>
             <View style={styles.moodContainer}>
@@ -468,5 +505,27 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 13,
     color: '#666',
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f8ff',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  categoryChipSelected: {
+    backgroundColor: '#007AFF',
+  },
+  categoryChipText: {
+    marginLeft: 6,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  categoryChipTextSelected: {
+    color: '#fff',
   },
 });

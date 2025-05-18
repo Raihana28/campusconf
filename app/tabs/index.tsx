@@ -315,17 +315,37 @@ export default function PostsTabScreen() {
       ]}
     >
       <View style={styles.cardHeader}>
-        <View style={styles.userInfo}>
-          <Text style={styles.username}>
-            {item.isAnonymous ? 'Anonymous' : item.username}
-          </Text>
-          <Text style={styles.timestamp}>
-            {new Date(item.timestamp).toLocaleDateString()}
-          </Text>
+        <View style={[
+          styles.userInfoRow,
+          viewMode === 'grid' && styles.userInfoRowGrid
+        ]}>
+          {/* Left: Username and time */}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.username}>
+              {item.isAnonymous ? 'Anonymous' : item.username}
+            </Text>
+            <Text style={styles.timestamp}>
+              {new Date(item.timestamp).toLocaleDateString()}
+            </Text>
+          </View>
+          {/* Right: Mood (and category below it in grid mode) */}
+          <View style={{ alignItems: 'center' }}>
+            {item.mood && (
+              <Ionicons name={getMoodIcon(item.mood)} size={20} color="#007AFF" style={{ marginBottom: viewMode === 'grid' ? 4 : 0 }} />
+            )}
+            {viewMode === 'grid' && (
+              <View style={styles.categoryChipGrid}>
+                <Text style={styles.categoryChipText}>{item.category}</Text>
+              </View>
+            )}
+          </View>
+          {/* In list mode, category is in the center */}
+          {viewMode !== 'grid' && (
+            <View style={styles.categoryChip}>
+              <Text style={styles.categoryChipText}>{item.category}</Text>
+            </View>
+          )}
         </View>
-        {item.mood && (
-          <Ionicons name={getMoodIcon(item.mood)} size={20} color="#007AFF" />
-        )}
         {/* Show delete button only for user's own confessions */}
         {showMyConfessions && item.userId === currentUserId && (
           <TouchableOpacity
@@ -665,6 +685,15 @@ const styles = StyleSheet.create({
   userInfo: {
     flex: 1,
   },
+  userInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 100,
+  },
+  userInfoRowGrid: {
+    gap: 8,
+    alignItems: 'flex-start',
+  },
   interactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -706,5 +735,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  categoryChip: {
+    backgroundColor: '#e1f5fe',
+    borderRadius: 15,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    marginTop: 4,
+    marginLeft: 8,
+    alignSelf: 'center',
+  },
+  categoryChipGrid: {
+    backgroundColor: '#e1f5fe',
+    borderRadius: 15,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    marginTop: 2,
+    alignSelf: 'center',
+  },
+  categoryChipText: {
+    color: '#01579b',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
