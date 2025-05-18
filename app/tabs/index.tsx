@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   collection,
   deleteDoc,
@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, RefreshControl, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { db } from "../../firebaseConfig";
+import { auth, db } from "../../firebaseConfig";
 import { getUser, savePost } from "../../utils/firestore"; // Add getUser to imports
 
 // Add this helper function
@@ -53,12 +53,20 @@ type Post = {
 
 export default function PostsTabScreen() {
   const router = useRouter();
+  const { showMyConfessions: showMyConfessionsParam } = useLocalSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [showMyConfessions, setShowMyConfessions] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [filterType, setFilterType] = useState('latest'); // Replace categories section with trending
   const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
-  const currentUserId = "user123"; // Make sure this matches the userId you use when posting
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUserId(user?.uid || null);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
@@ -88,6 +96,12 @@ export default function PostsTabScreen() {
     });
     return unsubscribe;
   }, [currentUserId]);
+
+  useEffect(() => {
+    if (showMyConfessionsParam === 'true') {
+      setShowMyConfessions(true);
+    }
+  }, [showMyConfessionsParam]);
 
   // Filter posts based on userId for My Confessions
   const filteredPosts = showMyConfessions
@@ -190,6 +204,11 @@ export default function PostsTabScreen() {
 
   // Update the handleShare function to properly save shared posts
   const handleShare = async (post: Post) => {
+    if (!currentUserId) {
+      Alert.alert("Error", "You must be logged in to share posts");
+      return;
+    }
+
     try {
       const result = await Share.share({
         message: `${post.content}\n- Shared from ${post.isAnonymous ? 'Anonymous' : post.username}`,
@@ -204,7 +223,7 @@ export default function PostsTabScreen() {
           category: post.category,
           isAnonymous: false,
           likes: 0,
-          userId: currentUserId,
+          userId: currentUserId, // Now currentUserId is guaranteed to be a string
         };
         try {
           await savePost(sharedPost);
@@ -218,28 +237,49 @@ export default function PostsTabScreen() {
     }
   };
 
-  // Update the handleDelete function to only modify local state
+  // Update the handleDelete function
   const handleDelete = async (postId: string) => {
+    if (!currentUserId) {
+      Alert.alert("Error", "You must be logged in to delete posts");
+      return;
+    }
+
+    // Find the post to verify ownership
+    const postToDelete = posts.find(post => post.id === postId);
+    
+    if (!postToDelete) {
+      Alert.alert("Error", "Post not found");
+      return;
+    }
+
+    // Verify ownership
+    if (postToDelete.userId !== currentUserId) {
+      Alert.alert("Error", "You can only delete your own posts");
+      return;
+    }
+
     Alert.alert(
       "Delete Confession",
       "Are you sure you want to delete this confession?",
       [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
             try {
-
+              // Delete from Firestore
+              await deleteDoc(doc(db, "posts", postId));
+              
+              // Update local state
               setPosts(currentPosts => 
                 currentPosts.filter(post => post.id !== postId)
               );
-              Alert.alert("Success", "Confession removed from display");
+              
+              Alert.alert("Success", "Confession deleted successfully");
             } catch (error) {
-              Alert.alert("Error", "Failed to remove confession from display");
+              console.error("Delete error:", error);
+              Alert.alert("Error", "Failed to delete confession. Please try again.");
             }
           }
         }
@@ -249,12 +289,17 @@ export default function PostsTabScreen() {
 
   // Add the handlePost function
   const handlePost = async (post: Post) => {
+    if (!currentUserId) {
+      Alert.alert("Error", "You must be logged in to post");
+      return;
+    }
+
     try {
       const user = await getUser(currentUserId);
       const newPost = {
         ...post,
         username: user?.username || 'Anonymous',
-        userId: currentUserId
+        userId: currentUserId // This is important!
       };
       await savePost(newPost);
     } catch (error) {
@@ -281,6 +326,15 @@ export default function PostsTabScreen() {
         </View>
         {item.mood && (
           <Ionicons name={getMoodIcon(item.mood)} size={20} color="#007AFF" />
+        )}
+        {/* Show delete button only in My Confessions */}
+        {showMyConfessions && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDelete(item.id)}
+          >
+            <Ionicons name="trash" size={20} color="#FF3B30" />
+          </TouchableOpacity>
         )}
       </View>
       
@@ -402,16 +456,28 @@ export default function PostsTabScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={sortedPosts}
-        keyExtractor={item => item.id}
-        numColumns={viewMode === 'grid' ? 2 : 1}
-        key={viewMode} // Force re-render when changing view mode
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        renderItem={renderItem}
-      />
+      {showMyConfessions && filteredPosts.length === 0 ? (
+        <View style={styles.emptyStateContainer}>
+          <Text style={styles.emptyStateText}>No confessions yet!</Text>
+          <TouchableOpacity 
+            style={styles.emptyStateButton}
+            onPress={() => router.push('/tabs/post')}
+          >
+            <Text style={styles.emptyStateButtonText}>Start Confessing Here</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={sortedPosts}
+          keyExtractor={item => item.id}
+          numColumns={viewMode === 'grid' ? 2 : 1}
+          key={viewMode}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          renderItem={renderItem}
+        />
+      )}
     </View>
   );
 }
@@ -606,6 +672,33 @@ const styles = StyleSheet.create({
   },
   likedCount: {
     color: '#FF3B30',
+    fontWeight: '600',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 20,
+  },
+  emptyStateButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

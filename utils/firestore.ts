@@ -1,5 +1,6 @@
-import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
+import { PostInput } from '../types';
 
 type PostData = {
   content: string;
@@ -14,15 +15,32 @@ type PostData = {
 
 export type User = {
   id: string;
-  email: string;
   username: string;
+  email: string;
+  bio?: string;
+  profilePicture?: string;
   createdAt: string;
-  bio?: string; // Add bio as an optional property
 };
 
-export const savePost = async (postData: PostData): Promise<string> => {
-  const docRef = await addDoc(collection(db, "posts"), postData);
-  return docRef.id;
+export const savePost = async (postInput: PostInput): Promise<string> => {
+  if (!auth.currentUser) {
+    throw new Error('User must be authenticated to post');
+  }
+
+  const post = {
+    ...postInput,
+    timestamp: new Date().toISOString(),
+    likes: 0,
+    commentCount: 0
+  };
+
+  try {
+    const docRef = await addDoc(collection(db, "posts"), post);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error saving post:', error);
+    throw error;
+  }
 };
 
 export const createUser = async (userData: Omit<User, 'id'>) => {
@@ -82,3 +100,48 @@ export async function fetchPosts() {
     ...doc.data(),
   }));
 }
+
+// Delete a post
+export async function deletePost(postId: string) {
+  await deleteDoc(doc(db, "posts", postId));
+}
+
+// Add to your existing firestore.ts file
+
+export async function createNotification(notification: {
+  userId: string;
+  type: 'confession' | 'comment';
+  postId: string;
+  content: string;
+  username: string;
+}) {
+  const notificationsRef = collection(db, "notifications");
+  await addDoc(notificationsRef, {
+    ...notification,
+    timestamp: new Date().toISOString(),
+    read: false,
+  });
+}
+
+// Example usage:
+// For confessions:
+/*
+await createNotification({
+  userId: auth.currentUser?.uid ?? '',
+  type: 'confession',
+  postId: 'some-post-id',
+  content: 'confession content',
+  username: 'username'
+});
+*/
+
+// For comments:
+/*
+await createNotification({
+  userId: 'post-owner-id',
+  type: 'comment',
+  postId: 'some-post-id',
+  content: 'comment content',
+  username: 'commenter username'
+});
+*/

@@ -19,18 +19,7 @@ import {
 import { auth, db } from "../../firebaseConfig";
 import { getUser, savePost } from "../../utils/firestore"; // Import your Firestore utility
 import { CATEGORIES } from '../constants/categories';
-
-type Post = {
-  id: string;
-  content: string;
-  username: string;
-  timestamp: string;
-  category: string;
-  isAnonymous: boolean;
-  likes: number;
-  userId: string;  // Add this line
-  mood?: string;   // Make this optional since it's not always required
-};
+import { PostInput, Post } from '../../types';
 
 type Mood = {
   id: string;
@@ -59,7 +48,7 @@ export default function PostScreen() {
   const [confession, setConfession] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [mood, setMood] = useState<string>('');
+  const [mood, setMood] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const MOODS = [
@@ -79,35 +68,56 @@ export default function PostScreen() {
     loadUserData();
   }, []);
 
+  // Add this useEffect after your existing useEffects
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        Alert.alert('Authentication Error', 'Please log in to post confessions');
+        router.push('/login'); // Redirect to login if needed
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handlePost = async () => {
-    if (!currentUser) {
+    if (!auth.currentUser) {
       Alert.alert('Error', 'Please log in to post');
       return;
     }
 
-    if (!selectedCategory) {
-      Alert.alert('Select Category', 'Please select a category for your confession');
+    if (!confession.trim()) {
+      Alert.alert('Error', 'Please write your confession');
       return;
     }
+
+    if (!selectedCategory) {
+      Alert.alert('Error', 'Please select a category');
+      return;
+    }
+
     try {
-      const postId = await savePost({
+      const newPost: PostInput = {
         content: confession,
-        username: isAnonymous ? "Anonymous" : currentUser.username,
-        timestamp: new Date().toISOString(),
+        username: isAnonymous ? 'Anonymous' : auth.currentUser.displayName || 'Anonymous',
         category: selectedCategory,
-        isAnonymous,
-        likes: 0,
-        userId: auth.currentUser!.uid,
-        mood: mood, // Include mood if selected
-      });
+        isAnonymous: isAnonymous,
+        userId: auth.currentUser.uid,
+        mood: mood || undefined,
+      };
+
+      await savePost(newPost);
+      
       // Reset form
       setConfession('');
       setSelectedCategory('');
       setIsAnonymous(true);
       setMood('');
-      router.push(`/post/${postId}`);
+      
+      router.push('/tabs');
     } catch (error) {
-      Alert.alert("Error", "Failed to post. Please try again.");
+      console.error('Error posting:', error);
+      Alert.alert('Error', 'Failed to post confession');
     }
   };
 

@@ -4,6 +4,7 @@ import { collection, doc, getDoc, onSnapshot, orderBy, query } from "firebase/fi
 import { useEffect, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from "../../firebaseConfig";
+import { PostInput } from '../../types';
 import { saveComment, savePost, saveUser } from "../../utils/firestore";
 
 type Comment = {
@@ -11,17 +12,6 @@ type Comment = {
   content: string;
   username: string;
   timestamp: string;
-};
-
-type Post = {
-  id: string;
-  content: string;
-  username: string;
-  timestamp: string;
-  category: string;
-  isAnonymous: boolean;
-  likes: number;
-  userId: string;
 };
 
 export default function PostDetailScreen() {
@@ -92,15 +82,16 @@ export default function PostDetailScreen() {
   const handleSavePost = async () => {
     if (!post) return;
     try {
-      const postId = await savePost({
+      const postData: PostInput = {
         content: post.content,
         username: post.username ?? "Anonymous",
-        timestamp: post.timestamp,
         category: post.category,
         isAnonymous: post.isAnonymous,
-        likes: post.likes,
-        userId: post.userId ?? "user123", // Add userId from post or fallback
-      });
+        userId: post.userId,
+        mood: post.mood
+      };
+      
+      const postId = await savePost(postData);
       alert("Post saved with ID: " + postId);
     } catch (error) {
       alert("Failed to save post: " + error);

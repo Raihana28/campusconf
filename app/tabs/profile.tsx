@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,11 +23,13 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState('');
   const [editedBio, setEditedBio] = useState('');
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserData();
   }, []);
 
+  // Update your loadUserData function
   const loadUserData = async () => {
     if (auth.currentUser) {
       const user = await getUser(auth.currentUser.uid);
@@ -32,6 +37,7 @@ export default function ProfileScreen() {
         setUserData(user);
         setEditedUsername(user.username);
         setEditedBio(user.bio || '');
+        setProfileImage(user.profilePicture || null);
       }
     }
   };
@@ -62,6 +68,53 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleProfilePicture = async () => {
+    try {
+      // Request permissions
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Denied', 'Please allow access to your photo library');
+        return;
+      }
+
+      // Pick the image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        // Start upload process
+        const uri = result.assets[0].uri;
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        
+        // Upload to Firebase Storage
+        const storage = getStorage();
+        const storageRef = ref(storage, `profilePictures/${auth.currentUser?.uid}`);
+        
+        await uploadBytes(storageRef, blob);
+        const downloadURL = await getDownloadURL(storageRef);
+        
+        // Update user profile
+        if (userData) {
+          await updateUser(userData.id, {
+            ...userData,
+            profilePicture: downloadURL,
+          });
+          setProfileImage(downloadURL);
+          Alert.alert('Success', 'Profile picture updated successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating profile picture:', error);
+      Alert.alert('Error', 'Failed to update profile picture');
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -70,9 +123,19 @@ export default function ProfileScreen() {
           style={styles.coverPhoto}
         />
         <View style={styles.profilePhotoContainer}>
-          <TouchableOpacity>
-            <View style={styles.profilePhoto}>
-              <Ionicons name="person-circle" size={80} color="#007AFF" />
+          <TouchableOpacity onPress={handleProfilePicture}>
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.profilePhoto}
+              />
+            ) : (
+              <View style={styles.profilePhoto}>
+                <Ionicons name="person-circle" size={80} color="#007AFF" />
+              </View>
+            )}
+            <View style={styles.editProfilePicButton}>
+              <Ionicons name="camera" size={20} color="#fff" />
             </View>
           </TouchableOpacity>
         </View>
@@ -194,8 +257,25 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   profilePhoto: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: '#f0f0f0',
-    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editProfilePicButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#007AFF',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   profileInfo: {
     marginTop: 50,
