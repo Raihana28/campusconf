@@ -9,7 +9,7 @@ export default function RootLayout() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.replace('/');
+        router.replace('/login');
       } else {
         router.replace('/');
       }

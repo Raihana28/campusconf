@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Swiper from 'react-native-swiper';
@@ -154,83 +154,66 @@ function ParticlesBackground() {
 }
 
 export default function WelcomeScreen() {
-  const [showMain, setShowMain] = useState(false);
+  const [swiperIndex, setSwiperIndex] = useState(0);
+  const router = useRouter();
   const { displayName } = useCurrentUser();
 
-  if (!showMain) {
-    return (
-      <Swiper
-        style={styles.wrapper}
-        showsButtons={false}
-        loop={false}
-        dot={<View style={styles.dot} />}
-        activeDot={<View style={styles.activeDot} />}
-        onIndexChanged={(index) => {
-          if (index === 2) {
-            setTimeout(() => setShowMain(true), 500);
-          }
-        }}
-      >
-        <View style={styles.slide}>
-          <ParticlesBackground />
-          <Ionicons name="shield-checkmark" size={100} color="#007AFF" />
-          <Text style={styles.slideTitle}>Safe & Anonymous</Text>
-          <Text style={styles.slideText}>
-            Share your thoughts and experiences anonymously with your campus community. Your privacy is our top priority.
-          </Text>
-        </View>
-
-        <View style={styles.slide}>
-          <ParticlesBackground />
-          <Ionicons name="people" size={100} color="#007AFF" />
-          <Text style={styles.slideTitle}>Connect & Engage</Text>
-          <Text style={styles.slideText}>
-            Read, react, and comment on confessions from fellow students. You're not alone in your campus journey.
-          </Text>
-        </View>
-
-        <View style={styles.slide}>
-          <ParticlesBackground />
-          <Text style={styles.welcomeTitle}>Welcome to{'\n'}Campus Confessions</Text>
-          <TouchableOpacity 
-            style={styles.getStartedButton}
-            onPress={() => setShowMain(true)}
-          >
-            <Text style={styles.getStartedText}>Get Started</Text>
-          </TouchableOpacity>
-        </View>
-      </Swiper>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <View style={styles.logoContainer}>
-        <View style={styles.logoCircle}>
-          <Image 
-            source={require('./assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+    <Swiper
+      style={styles.wrapper}
+      showsButtons={false}
+      loop={false}
+      index={swiperIndex}
+      dot={<View style={styles.dot} />}
+      activeDot={<View style={styles.activeDot} />}
+      onIndexChanged={setSwiperIndex}
+    >
+      {/* Slide 1 */}
+      <View style={styles.slide}>
+        <ParticlesBackground />
+        <Ionicons name="shield-checkmark" size={100} color="#007AFF" />
+        <Text style={styles.slideTitle}>Safe & Anonymous</Text>
+        <Text style={styles.slideText}>
+          Share your thoughts and experiences anonymously with your campus community. Your privacy is our top priority.
+        </Text>
+      </View>
+
+      {/* Slide 2 */}
+      <View style={styles.slide}>
+        <ParticlesBackground />
+        <Ionicons name="people" size={100} color="#007AFF" />
+        <Text style={styles.slideTitle}>Connect & Engage</Text>
+        <Text style={styles.slideText}>
+          Read, react, and comment on confessions from fellow students. You're not alone in your campus journey.
+        </Text>
+      </View>
+
+      {/* Slide 3: Main Welcome Container */}
+      <View style={styles.container}>
+        <View style={styles.logoContainer}>
+          <View style={styles.logoCircle}>
+            <Image 
+              source={require('./assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.title}>Campus Confessions</Text>
+          <TypingEffect />
         </View>
-        <Text style={styles.title}>Campus Confessions</Text>
-        <TypingEffect />
-      </View>
-      
-      <View style={styles.buttonContainer}>
-        <Link href="/login" style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Sign In with Email</Text>
-        </Link>
+        
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push('/login')}
+          >
+            <Text style={styles.primaryButtonText}>Get Started</Text>
+          </TouchableOpacity>
 
-        <Link href="/tabs" style={styles.outlineButton}>
-          <Text style={styles.outlineButtonText}>Continue Anonymously</Text>
-        </Link>
-
-        <Link href="/register" style={styles.linkText}>
-          <Text style={styles.linkTextContent}>Don't have an account? Register</Text>
-        </Link>
+          
+        </View>
       </View>
-    </View>
+    </Swiper>
   );
 }
 
@@ -357,7 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     padding: 14,
     borderRadius: 22,
-    width: '90%',
+    width: '50%',
     marginVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
