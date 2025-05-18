@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native'; // Add this import
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Alert,
   Image,
@@ -15,7 +17,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { auth } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { getUser, updateUser, User } from '../../utils/firestore';
 
 export default function ProfileScreen() {
@@ -25,9 +27,18 @@ export default function ProfileScreen() {
   const [editedBio, setEditedBio] = useState('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  // Add stats
+  const [confessionCount, setConfessionCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
+  const [likeCount, setLikeCount] = useState(0);
+
+  // Load user data and stats on focus
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+      loadStats();
+    }, [])
+  );
 
   const loadUserData = async () => {
     if (auth.currentUser) {
@@ -39,6 +50,29 @@ export default function ProfileScreen() {
         setProfileImage(user.profilePicture || null);
       }
     }
+  };
+
+  // Load stats for confessions, comments, likes
+  const loadStats = async () => {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+
+    // Confessions count
+    const confessionsSnap = await getDocs(query(collection(db, "posts"), where("userId", "==", uid)));
+    setConfessionCount(confessionsSnap.size);
+
+    // Comments count
+    let totalComments = 0;
+    const postsSnap = await getDocs(collection(db, "posts"));
+    for (const postDoc of postsSnap.docs) {
+      const commentsSnap = await getDocs(query(collection(db, "posts", postDoc.id, "comments"), where("userId", "==", uid)));
+      totalComments += commentsSnap.size;
+    }
+    setCommentCount(totalComments);
+
+    // Likes count
+    const likesSnap = await getDocs(query(collection(db, "likes"), where("userId", "==", uid)));
+    setLikeCount(likesSnap.size);
   };
 
   const handleSaveProfile = async () => {
@@ -186,29 +220,40 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {/* Stats Section */}
       <View style={styles.stats}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>{confessionCount}</Text>
           <Text style={styles.statLabel}>Confessions</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>{commentCount}</Text>
           <Text style={styles.statLabel}>Comments</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>{likeCount}</Text>
           <Text style={styles.statLabel}>Likes</Text>
         </View>
       </View>
 
+      {/* Sections */}
       <View style={styles.sections}>
-        <TouchableOpacity style={styles.sectionItem}>
+        <TouchableOpacity
+          style={styles.sectionItem}
+          onPress={() => {
+            // Go to My Confessions section in tabs/index
+            router.push({ pathname: '/tabs', params: { showMyConfessions: 'true' } });
+          }}
+        >
           <Ionicons name="document-text-outline" size={24} color="#007AFF" />
           <Text style={styles.sectionText}>My Confessions</Text>
           <Ionicons name="chevron-forward" size={24} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.sectionItem}>
+        <TouchableOpacity
+          style={styles.sectionItem}
+          onPress={() => router.push('/myComments')}
+        >
           <Ionicons name="chatbubble-outline" size={24} color="#007AFF" />
           <Text style={styles.sectionText}>My Comments</Text>
           <Ionicons name="chevron-forward" size={24} color="#666" />

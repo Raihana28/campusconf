@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
+  ScrollView as RNScrollView,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,57 +29,71 @@ type SearchResult = {
   mood?: string;
 };
 
+const POPULAR_TOPICS = [
+  "Dorm Life",
+  "Exams",
+  "Cafeteria",
+  "Professors",
+  "Clubs",
+  "Relationships"
+];
+
+const POPULAR_DUMMY_POSTS = [
+  {
+    id: 'p1',
+    content: "The cafeteria food is actually amazing this semester! Who's the new chef? 🍔🍟",
+    category: "Cafeteria",
+    timestamp: "1 hour ago",
+    likes: 132,
+    commentCount: 41,
+    isAnonymous: false,
+    username: "HungryStudent",
+    userId: "userA",
+    mood: "happy"
+  },
+  {
+    id: 'p2',
+    content: "Dorm WiFi went down again during my Zoom exam... anyone else? 😭",
+    category: "Dorm Life",
+    timestamp: "2 hours ago",
+    likes: 98,
+    commentCount: 27,
+    isAnonymous: true,
+    userId: "userB",
+    mood: "sad"
+  },
+  {
+    id: 'p3',
+    content: "Shoutout to Prof. Smith for making calculus actually fun. Never thought I'd say that!",
+    category: "Professors",
+    timestamp: "3 hours ago",
+    likes: 120,
+    commentCount: 33,
+    isAnonymous: false,
+    username: "MathGeek",
+    userId: "userC",
+    mood: "happy"
+  },
+  {
+    id: 'p4',
+    content: "Our club just hit 200 members! So proud of everyone who joined the Coding Society 💻🎉",
+    category: "Clubs",
+    timestamp: "4 hours ago",
+    likes: 150,
+    commentCount: 50,
+    isAnonymous: false,
+    username: "ClubLeader",
+    userId: "userD",
+    mood: "excited"
+  }
+];
+
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
-
-  // Load recent searches from storage on mount
-  useEffect(() => {
-    loadRecentSearches();
-  }, []);
-
-  // Add dummy results
-  const dummyResults: SearchResult[] = [
-    {
-      id: '1',
-      content: "Just aced my final exam after pulling an all-nighter! Coffee is my best friend 😴",
-      category: "Study",
-      timestamp: "2 hours ago",
-      likes: 45,
-      commentCount: 12,
-      isAnonymous: false,
-      username: "StudyBuddy",
-      userId: "user1",
-      mood: "happy"
-    },
-    {
-      id: '2',
-      content: "The cafeteria food today was a real adventure... not the good kind 🤢",
-      category: "Campus Life",
-      timestamp: "5 hours ago",
-      likes: 89,
-      commentCount: 23,
-      isAnonymous: true,
-      userId: "user2",
-      mood: "funny"
-    },
-    {
-      id: '3',
-      content: "To the person who returned my lost laptop at the library - you're an angel! 🙏",
-      category: "Gratitude",
-      timestamp: "1 day ago",
-      likes: 156,
-      commentCount: 15,
-      isAnonymous: false,
-      username: "GratefulStudent",
-      userId: "user3",
-      mood: "happy"
-    }
-  ];
 
   // Handle search with Firestore
   const handleSearch = async (searchText: string) => {
@@ -91,8 +104,8 @@ export default function SearchScreen() {
 
     setIsLoading(true);
     try {
-      // Include dummy results in search
-      const filteredDummy = dummyResults.filter(post => 
+      // Use POPULAR_DUMMY_POSTS and type post as SearchResult
+      const filteredDummy = POPULAR_DUMMY_POSTS.filter((post: SearchResult) => 
         post.content.toLowerCase().includes(searchText.toLowerCase()) ||
         post.category.toLowerCase().includes(searchText.toLowerCase())
       );
@@ -123,7 +136,7 @@ export default function SearchScreen() {
           id: doc.id,
           ...doc.data()
         } as SearchResult))
-        .filter(post => 
+        .filter((post: SearchResult) => 
           post.content.toLowerCase().includes(searchText.toLowerCase()) ||
           post.category.toLowerCase().includes(searchText.toLowerCase())
         );
@@ -140,51 +153,11 @@ export default function SearchScreen() {
       });
 
       setSearchResults(sortedResults);
-
-      // Save to recent searches
-      if (searchText.trim()) {
-        saveRecentSearch(searchText);
-      }
     } catch (error) {
       Alert.alert('Error', 'Failed to search confessions');
       console.error('Search error:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Save recent searches to AsyncStorage
-  const saveRecentSearch = async (query: string) => {
-    if (!recentSearches.includes(query)) {
-      const newSearches = [query, ...recentSearches.slice(0, 4)];
-      setRecentSearches(newSearches);
-      try {
-        await AsyncStorage.setItem('recentSearches', JSON.stringify(newSearches));
-      } catch (error) {
-        console.error('Error saving recent searches:', error);
-      }
-    }
-  };
-
-  // Load recent searches from AsyncStorage
-  const loadRecentSearches = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('recentSearches');
-      if (saved) {
-        setRecentSearches(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.error('Error loading recent searches:', error);
-    }
-  };
-
-  // Clear recent searches
-  const clearRecentSearches = async () => {
-    try {
-      await AsyncStorage.removeItem('recentSearches');
-      setRecentSearches([]);
-    } catch (error) {
-      console.error('Error clearing recent searches:', error);
     }
   };
 
@@ -199,11 +172,9 @@ export default function SearchScreen() {
         </View>
         <Text style={styles.timestamp}>{item.timestamp}</Text>
       </View>
-      
       <Text style={styles.resultContent} numberOfLines={3}>
         {item.content}
       </Text>
-      
       <View style={styles.resultFooter}>
         <View style={styles.statsContainer}>
           <Ionicons name="heart-outline" size={16} color="#666" />
@@ -220,6 +191,7 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.container}>
+      {/* --- Search Bar --- */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#666" />
@@ -237,7 +209,6 @@ export default function SearchScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-
         {/* Sort options */}
         <View style={styles.sortContainer}>
           <TouchableOpacity 
@@ -267,7 +238,6 @@ export default function SearchScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-
         {/* Category filters */}
         <ScrollView 
           horizontal 
@@ -302,47 +272,61 @@ export default function SearchScreen() {
         </ScrollView>
       </View>
 
-      {/* Results or Recent Searches */}
-      {isLoading ? (
-        <ActivityIndicator style={styles.loader} size="large" color="#007AFF" />
-      ) : searchQuery ? (
-        <FlatList
-          data={searchResults}
-          renderItem={renderSearchResult}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.resultsList}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="search" size={48} color="#ccc" />
-              <Text style={styles.emptyStateText}>No results found</Text>
-            </View>
-          }
-        />
-      ) : (
-        <View style={styles.recentContainer}>
-          <View style={styles.recentHeader}>
-            <Text style={styles.recentTitle}>Recent Searches</Text>
-            {recentSearches.length > 0 && (
-              <TouchableOpacity onPress={clearRecentSearches}>
-                <Text style={styles.clearText}>Clear</Text>
-              </TouchableOpacity>
-            )}
+      {/* --- Popular Topics Marquee --- */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Popular Topics</Text>
+      </View>
+      <RNScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.marqueeContainer}
+        contentContainerStyle={{ alignItems: 'center' }}
+      >
+        {POPULAR_TOPICS.map((topic, idx) => (
+          <View key={topic} style={styles.topicChip}>
+            <Text style={styles.topicChipText}>{topic}</Text>
           </View>
-          {recentSearches.map((search, index) => (
-            <TouchableOpacity 
-              key={index}
-              style={styles.recentItem}
-              onPress={() => {
-                setSearchQuery(search);
-                handleSearch(search);
-              }}
-            >
-              <Ionicons name="time-outline" size={20} color="#666" />
-              <Text style={styles.recentText}>{search}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+        ))}
+      </RNScrollView>
+
+      {/* --- Popular Searches Section --- */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Popular Searches</Text>
+      </View>
+      <FlatList
+        data={POPULAR_DUMMY_POSTS}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.popularCard}
+            onPress={() => router.push(`../post/${item.id}`)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.popularCardHeader}>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>{item.category}</Text>
+              </View>
+              <Text style={styles.timestamp}>{item.timestamp}</Text>
+            </View>
+            <Text style={styles.popularCardContent} numberOfLines={4}>
+              {item.content}
+            </Text>
+            <View style={styles.popularCardFooter}>
+              <View style={styles.statsContainer}>
+                <Ionicons name="heart-outline" size={16} color="#007AFF" />
+                <Text style={styles.statsTextBlue}>{item.likes}</Text>
+                <Ionicons name="chatbubble-outline" size={16} color="#007AFF" style={{ marginLeft: 10 }} />
+                <Text style={styles.statsTextBlue}>{item.commentCount}</Text>
+              </View>
+              <Text style={styles.usernameText}>
+                {item.isAnonymous ? 'Anonymous' : item.username}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 10 }}
+        scrollEnabled={false}
+      />
     </View>
   );
 }
@@ -491,36 +475,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
   },
-  recentContainer: {
-    padding: 15,
-  },
-  recentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  recentTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  clearText: {
-    color: '#007AFF',
-    fontSize: 14,
-  },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  recentText: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#333',
-  },
   emptyState: {
     alignItems: 'center',
     marginTop: 40,
@@ -532,5 +486,77 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 20,
+  },
+  sectionHeader: {
+    marginTop: 18,
+    marginBottom: 6,
+    paddingHorizontal: 18,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  marqueeContainer: {
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    minHeight: 48,
+  },
+  topicChip: {
+    backgroundColor: '#fff',
+    borderColor: '#007AFF',
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    marginRight: 10,
+    marginVertical: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  topicChipText: {
+    color: '#007AFF',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  popularCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#007AFF',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#007AFF',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  popularCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  popularCardContent: {
+    fontSize: 15,
+    color: '#222',
+    marginBottom: 10,
+    lineHeight: 22,
+  },
+  popularCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 8,
+  },
+  statsTextBlue: {
+    color: '#007AFF',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 4,
+    marginRight: 8,
   },
 });

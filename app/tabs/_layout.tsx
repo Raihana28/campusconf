@@ -7,21 +7,21 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         tabBarShowLabel: true,
-        tabBarActiveTintColor: '#fff',
-        tabBarInactiveTintColor: '#fff',
+        tabBarActiveTintColor: '#fff',      // Active: white
+        tabBarInactiveTintColor: '#bbb',    // Inactive: grey
         headerShown: false,
-        tabBarLabel: ({ focused }) => null, // Remove default label
+        tabBarLabel: ({ focused, color }) => null, // Remove default label
         tabBarStyle: {
           position: 'absolute',
           bottom: 20,
-          left: '15%',  // Changed from 10% to 15% to make bar narrower
-          right: '15%', // Changed from 10% to 15% to make bar narrower
+          left: '15%',
+          right: '15%',
           elevation: 0,
           backgroundColor: '#007AFF',
           borderRadius: 30,
-          height: 65, // Slightly reduced height
-          paddingTop: 8,  // Reduced padding
-          paddingBottom: 8, // Reduced padding
+          height: 65,
+          paddingTop: 8,
+          paddingBottom: 8,
           borderWidth: 0,
           ...Platform.select({
             ios: {
@@ -40,10 +40,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={styles.tabItem}>
-              <Ionicons name="home" size={24} color={color} />
-              <Text style={styles.tabLabel}>Home</Text>
+              <Ionicons name="home" size={24} color={focused ? '#fff' : '#bbb'} />
+              <Text style={[styles.tabLabel, { color: focused ? '#fff' : '#bbb' }]}>Home</Text>
             </View>
           ),
         }}
@@ -51,10 +51,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={styles.tabItem}>
-              <Ionicons name="search" size={24} color={color} />
-              <Text style={styles.tabLabel}>Search</Text>
+              <Ionicons name="search" size={24} color={focused ? '#fff' : '#bbb'} />
+              <Text style={[styles.tabLabel, { color: focused ? '#fff' : '#bbb' }]}>Search</Text>
             </View>
           ),
         }}
@@ -73,17 +73,17 @@ export default function TabsLayout() {
           tabBarItemStyle: {
             height: 55,
             width: 50,
-            marginTop: -15, // Increased negative margin to lift button higher
+            marginTop: -15,
           },
         }}
       />
       <Tabs.Screen
         name="notifications"
         options={{
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={styles.tabItem}>
-              <Ionicons name="notifications-outline" size={24} color={color} />
-              <Text style={styles.tabLabel}>Alerts</Text>
+              <Ionicons name="notifications-outline" size={24} color={focused ? '#fff' : '#bbb'} />
+              <Text style={[styles.tabLabel, { color: focused ? '#fff' : '#bbb' }]}>Alerts</Text>
             </View>
           ),
         }}
@@ -91,10 +91,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <View style={styles.tabItem}>
-              <Ionicons name="person" size={24} color={color} />
-              <Text style={styles.tabLabel}>Profile</Text>
+              <Ionicons name="person" size={24} color={focused ? '#fff' : '#bbb'} />
+              <Text style={[styles.tabLabel, { color: focused ? '#fff' : '#bbb' }]}>Profile</Text>
             </View>
           ),
         }}

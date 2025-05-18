@@ -61,6 +61,51 @@ const DUMMY_NOTIFICATIONS: Notification[] = [
     username: 'System',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
     read: true
+  },
+  {
+    id: '6',
+    type: 'comment',
+    postId: 'post303',
+    content: 'Great point about the new cafeteria menu!',
+    username: 'Jess',
+    timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(), // 1.5 hours ago
+    read: false
+  },
+  {
+    id: '7',
+    type: 'like',
+    postId: 'post404',
+    content: 'Someone liked your confession about exam stress.',
+    username: 'Chris',
+    timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString(), // 10 mins ago
+    read: false
+  },
+  {
+    id: '8',
+    type: 'confession',
+    postId: 'post505',
+    content: 'A new confession was posted in "Dorm Life".',
+    username: 'System',
+    timestamp: new Date(Date.now() - 1000 * 60 * 200).toISOString(), // 3.3 hours ago
+    read: true
+  },
+  {
+    id: '9',
+    type: 'comment',
+    postId: 'post606',
+    content: 'Thanks for sharing your experience!',
+    username: 'Taylor',
+    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 mins ago
+    read: false
+  },
+  {
+    id: '10',
+    type: 'like',
+    postId: 'post707',
+    content: 'Your confession about group projects received a like.',
+    username: 'Morgan',
+    timestamp: new Date(Date.now() - 1000 * 60 * 25).toISOString(), // 25 mins ago
+    read: false
   }
 ];
 
@@ -171,7 +216,9 @@ export default function NotificationsScreen() {
   const renderNotification = ({ item }: { item: Notification }) => (
     <TouchableOpacity
       style={[styles.notificationItem, !item.read && styles.unreadNotification]}
-      onPress={() => router.push(`/post/${item.postId}`)}
+      // Disable navigation by removing onPress or making it a no-op
+      onPress={() => {}}
+      activeOpacity={1}
     >
       <View style={styles.notificationIcon}>
         <Ionicons 

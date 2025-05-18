@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { auth, db } from "../../firebaseConfig";
 import { PostInput } from '../../types';
-import { saveComment, savePost, saveUser, getUser } from "../../utils/firestore";
+import { getUser, saveComment, savePost, saveUser } from "../../utils/firestore";
 
 // Update the Comment type to include isAnonymous
 type Comment = {
@@ -95,14 +95,15 @@ export default function PostDetailScreen() {
 
       // Get the current user's data from Firestore
       const userData = await getUser(currentUser.uid);
-      
+
+      // If userData.username exists, use it and set isAnonymous to false
+      // Otherwise, fallback to 'Anonymous' and set isAnonymous to true
       const comment = {
         content: newComment,
-        // Use the username from Firestore user data if available and not posting anonymously
-        username: userData?.username || 'Anonymous',
+        username: userData?.username ? userData.username : 'Anonymous',
         timestamp: new Date().toISOString(),
-        isAnonymous: !userData?.username, // Set anonymous based on whether we have a username
-        userId: currentUser.uid, // Store the user ID for reference
+        isAnonymous: !userData?.username, // false if username exists, true otherwise
+        userId: currentUser.uid,
       };
 
       setNewComment('');
