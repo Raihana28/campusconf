@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from 'react';
@@ -19,7 +18,7 @@ import {
 import { auth, db } from "../../firebaseConfig";
 import { Post, PostInput } from '../../types';
 import { getUser, savePost } from "../../utils/firestore"; // Import your Firestore utility
-import { CATEGORIES } from '../constants/categories';
+
 
 type Mood = {
   id: string;
@@ -194,28 +193,8 @@ export default function PostScreen() {
               />
             </View>
 
-            <View style={styles.option}>
-              <View style={styles.optionLeft}>
-                <Ionicons name="apps" size={24} color="#007AFF" />
-                <Text style={styles.optionLabel}>Category</Text>
-              </View>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedCategory}
-                  style={styles.picker}
-                  onValueChange={(itemValue) => setSelectedCategory(itemValue)}
-                >
-                  <Picker.Item label="Select..." value="" />
-                  {CATEGORIES.map(category => (
-                    <Picker.Item 
-                      key={category.id} 
-                      label={category.name} 
-                      value={category.name} 
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
+ 
+
           </View>
 
           <View style={styles.optionSection}>

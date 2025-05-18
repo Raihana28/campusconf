@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { useState } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
+  Dimensions,
+  Easing,
   FlatList,
-  ScrollView as RNScrollView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,7 +15,7 @@ import {
   View
 } from 'react-native';
 import { db } from '../../firebaseConfig';
-import { CATEGORIES } from '../constants/categories';
+
 
 type SearchResult = {
   id: string;
@@ -93,7 +94,6 @@ export default function SearchScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
 
   // Handle search with Firestore
   const handleSearch = async (searchText: string) => {
@@ -104,7 +104,6 @@ export default function SearchScreen() {
 
     setIsLoading(true);
     try {
-      // Use POPULAR_DUMMY_POSTS and type post as SearchResult
       const filteredDummy = POPULAR_DUMMY_POSTS.filter((post: SearchResult) => 
         post.content.toLowerCase().includes(searchText.toLowerCase()) ||
         post.category.toLowerCase().includes(searchText.toLowerCase())
@@ -119,13 +118,6 @@ export default function SearchScreen() {
       if (selectedFilter) {
         queryConstraints.push(where('category', '==', selectedFilter));
       }
-
-      // Add sorting
-      queryConstraints.push(
-        sortBy === 'latest' 
-          ? orderBy('timestamp', 'desc')
-          : orderBy('likes', 'desc')
-      );
 
       // Create final query with all constraints
       const finalQuery = query(postsRef, ...queryConstraints);
@@ -144,15 +136,7 @@ export default function SearchScreen() {
       // Combine dummy and Firestore results
       const allResults = [...filteredDummy, ...results];
       
-      // Sort results based on current sortBy value
-      const sortedResults = allResults.sort((a, b) => {
-        if (sortBy === 'latest') {
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-        }
-        return b.likes - a.likes;
-      });
-
-      setSearchResults(sortedResults);
+      setSearchResults(allResults);
     } catch (error) {
       Alert.alert('Error', 'Failed to search confessions');
       console.error('Search error:', error);
@@ -189,6 +173,47 @@ export default function SearchScreen() {
     </TouchableOpacity>
   );
 
+  const MarqueeTopics = () => {
+    const translateX = useRef(new Animated.Value(0)).current;
+    const screenWidth = Dimensions.get('window').width;
+    const topicWidth = 130; // Adjust to fit your chip width
+    const totalWidth = POPULAR_TOPICS.length * topicWidth;
+
+    useEffect(() => {
+      const loop = () => {
+        translateX.setValue(0);
+        Animated.timing(translateX, {
+          toValue: -totalWidth,
+          duration: 9000,
+          useNativeDriver: true,
+          easing: Easing.linear,
+        }).start(loop);
+      };
+      loop();
+      // No cleanup needed since animation is continuous
+    }, [translateX, totalWidth]);
+
+    // Duplicate topics for seamless loop
+    const topics = [...POPULAR_TOPICS, ...POPULAR_TOPICS];
+
+    return (
+      <View style={{ height: 44, marginBottom: 10, overflow: 'hidden', width: '100%' }}>
+        <Animated.View
+          style={{
+            flexDirection: 'row',
+            transform: [{ translateX }],
+          }}
+        >
+          {topics.map((topic, idx) => (
+            <View key={idx} style={styles.topicChip}>
+              <Text style={styles.topicChipText}>{topic}</Text>
+            </View>
+          ))}
+        </Animated.View>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* --- Search Bar --- */}
@@ -209,7 +234,8 @@ export default function SearchScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-        {/* Sort options */}
+        {/* REMOVE Sort options */}
+        {/* 
         <View style={styles.sortContainer}>
           <TouchableOpacity 
             style={[styles.sortButton, sortBy === 'latest' && styles.sortButtonActive]}
@@ -238,7 +264,9 @@ export default function SearchScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        {/* Category filters */}
+        */}
+        {/* Category filters - REMOVE THIS BLOCK */}
+        {/* 
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
@@ -270,24 +298,14 @@ export default function SearchScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        */}
       </View>
 
       {/* --- Popular Topics Marquee --- */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Popular Topics</Text>
       </View>
-      <RNScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.marqueeContainer}
-        contentContainerStyle={{ alignItems: 'center' }}
-      >
-        {POPULAR_TOPICS.map((topic, idx) => (
-          <View key={topic} style={styles.topicChip}>
-            <Text style={styles.topicChipText}>{topic}</Text>
-          </View>
-        ))}
-      </RNScrollView>
+      <MarqueeTopics />
 
       {/* --- Popular Searches Section --- */}
       <View style={styles.sectionHeader}>
@@ -512,12 +530,12 @@ const styles = StyleSheet.create({
     marginRight: 10,
     marginVertical: 4,
     justifyContent: 'center',
+    minWidth: 110,
     alignItems: 'center',
   },
   topicChipText: {
     color: '#007AFF',
     fontWeight: '600',
-    fontSize: 15,
   },
   popularCard: {
     backgroundColor: '#fff',

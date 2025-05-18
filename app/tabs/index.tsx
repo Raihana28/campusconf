@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   collection,
   deleteDoc,
@@ -44,11 +44,11 @@ type Post = {
   category: string;
   isAnonymous: boolean;
   likes: number;
-  userId: string; // Make sure this is included
-  mood?: string; // Optional mood property
-  commentCount?: number; // Optional comment count
-  shareCount?: number; // Optional share count
-  hasLiked?: boolean; // Optional hasLiked property
+  userId: string; 
+  mood?: string; 
+  commentCount?: number;
+  shareCount?: number; 
+  hasLiked?: boolean; 
 };
 
 export default function PostsTabScreen() {
@@ -57,8 +57,8 @@ export default function PostsTabScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [showMyConfessions, setShowMyConfessions] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [filterType, setFilterType] = useState('latest'); // Replace categories section with trending
-  const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
+  const [filterType, setFilterType] = useState('latest');
+  const [viewMode, setViewMode] = useState('list'); 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,21 +103,20 @@ export default function PostsTabScreen() {
     }
   }, [showMyConfessionsParam]);
 
-  // Filter posts based on userId for My Confessions
+
   const filteredPosts = showMyConfessions
     ? posts.filter(post => post.userId === currentUserId)
     : posts;
 
-  // Add this sorting function
   const sortedPosts = filteredPosts.sort((a, b) => {
     if (filterType === 'trending') {
       return (b.likes || 0) - (a.likes || 0);
     }
-    // default to latest
+
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
   });
 
-  // Add refresh handler
+ 
   const onRefresh = async () => {
     setRefreshing(true);
     const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
@@ -145,7 +144,7 @@ export default function PostsTabScreen() {
     setRefreshing(false);
   };
 
-  // Add this function to handle likes
+
   const handleLike = async (post: Post) => {
     try {
       const postRef = doc(db, "posts", post.id);
@@ -268,10 +267,10 @@ export default function PostsTabScreen() {
           style: "destructive", 
           onPress: async () => {
             try {
-              // Delete from Firestore
+
               await deleteDoc(doc(db, "posts", postId));
               
-              // Update local state
+
               setPosts(currentPosts => 
                 currentPosts.filter(post => post.id !== postId)
               );
@@ -326,6 +325,15 @@ export default function PostsTabScreen() {
         </View>
         {item.mood && (
           <Ionicons name={getMoodIcon(item.mood)} size={20} color="#007AFF" />
+        )}
+        {/* Show delete button only for user's own confessions */}
+        {showMyConfessions && item.userId === currentUserId && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDelete(item.id)}
+          >
+            <Ionicons name="trash-outline" size={22} color="#FF3B30" />
+          </TouchableOpacity>
         )}
       </View>
       
